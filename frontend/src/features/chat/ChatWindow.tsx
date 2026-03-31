@@ -45,7 +45,7 @@ export const ChatWindow = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background border-l relative overflow-hidden">
+    <div className="flex flex-col h-full bg-background border-l relative overflow-hidden text-foreground">
       {/* Header */}
       <div className="h-16 flex items-center px-6 border-b shadow-sm bg-background/95 backdrop-blur z-10 shrink-0">
         <h2 className="font-semibold text-lg tracking-tight">Financial Analyst Copilot</h2>

@@ -11,3 +11,12 @@ wikipedia
 yfinance
 requests
 schedule
+SQLAlchemy
+passlib
+bcrypt==3.2.2
+PyJWT
+python-multipart
+google-generativeai
+pdfplumber
+pikepdf>=7.2.1
+
