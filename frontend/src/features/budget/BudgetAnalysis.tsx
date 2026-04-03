@@ -251,8 +251,19 @@ export const BudgetAnalysis = () => {
                     value={statementPassword} onChange={(e) => setStatementPassword(e.target.value)} 
                     className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-[10px]" 
                   />
-                  <button onClick={() => fileInputRef.current?.click()} className="w-full py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl text-xs font-bold text-slate-500 transition-colors">
-                    Re-upload Statement
+                  <button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    disabled={uploadStatus === 'loading'}
+                    className="w-full py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl text-xs font-bold text-slate-500 transition-all flex items-center justify-center gap-2"
+                  >
+                    {uploadStatus === 'loading' ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      'Re-upload Statement'
+                    )}
                   </button>
                 </div>
               </div>

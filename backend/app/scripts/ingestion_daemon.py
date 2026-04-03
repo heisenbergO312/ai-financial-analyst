@@ -3,6 +3,7 @@ import time
 import json
 import schedule
 import requests
+import yfinance as yf
 from pathlib import Path
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -34,42 +35,54 @@ FAISS_PATH = BASE_DIR / "faiss_financial_db"
 # Since we hit exactly 2 endpoints (Overview and Earnings) per stock, we can process 12 stocks a day safely!
 TICKERS_PER_DAY = 12
 
-def fetch_alpha_vantage_data(ticker: str):
-    """Fetches Overview and Earnings JSON seamlessly, translating them to standard RAG chunks."""
+def fetch_ticker_data(ticker: str):
+    """Fetches Ticker info and Earnings seamlessly using yfinance, translating them to standard RAG chunks."""
     documents = []
-    print(f"  -> Fetching alpha api data for {ticker}...")
     
-    # 1. Company Overview Network Request
-    try:
-        overview_url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={ALPHA_VANTAGE_API_KEY}"
-        overview_res = requests.get(overview_url).json()
-        
-        if "Symbol" in overview_res:
-            content = f"Company Overview for {ticker}:\n"
-            for key, value in overview_res.items():
-                content += f"{key}: {value}\n"
-            documents.append(Document(page_content=content, metadata={"source": f"AlphaVantage_Overview_{ticker}"}))
-    except Exception as e:
-        print(f"     Error fetching overview for {ticker}: {e}")
-
-    # STAGGER: Alpha Vantage strictly enforces 5 requests per MINUTE!
-    # By sleeping 15 seconds after each HTTP hit, we average exactly 4 requests a minute, safely flying under the radar.
-    time.sleep(15) 
+    # 1. Map .BSE (Alpha Vantage style) to .BO (Yahoo Finance style)
+    yf_ticker_symbol = ticker.replace(".BSE", ".BO")
+    print(f"  -> Fetching data for {yf_ticker_symbol} via yfinance...")
     
-    # 2. Annual Earnings Network Request
     try:
-        earnings_url = f"https://www.alphavantage.co/query?function=EARNINGS&symbol={ticker}&apikey={ALPHA_VANTAGE_API_KEY}"
-        earnings_res = requests.get(earnings_url).json()
+        t = yf.Ticker(yf_ticker_symbol)
+        info = t.info
         
-        if "symbol" in earnings_res and "annualEarnings" in earnings_res:
-            content = f"Annual Earnings Data for {ticker}:\n"
-            for earning in earnings_res["annualEarnings"][:5]: # Top 5 recent historical years
-                content += f"Fiscal Year Ending {earning.get('fiscalDateEnding')}: Reported EPS of {earning.get('reportedEPS')}\n"
-            documents.append(Document(page_content=content, metadata={"source": f"AlphaVantage_Earnings_{ticker}"}))
+        # 1. Company Overview / Info
+        if info:
+            content = f"Company Overview for {ticker} ({yf_ticker_symbol}):\n"
+            content += f"Business Summary: {info.get('longBusinessSummary', 'N/A')}\n"
+            content += f"Sector: {info.get('sector', 'N/A')}\n"
+            content += f"Industry: {info.get('industry', 'N/A')}\n"
+            content += f"Full Time Employees: {info.get('fullTimeEmployees', 'N/A')}\n"
+            content += f"Website: {info.get('website', 'N/A')}\n"
+            
+            # Key Ratios
+            content += f"\nFinancial Ratios:\n"
+            content += f"Trailing P/E: {info.get('trailingPE', 'N/A')}\n"
+            content += f"Forward P/E: {info.get('forwardPE', 'N/A')}\n"
+            content += f"Dividend Yield: {info.get('dividendYield', 'N/A')}\n"
+            content += f"Market Cap: {info.get('marketCap', 'N/A')}\n"
+            
+            documents.append(Document(page_content=content, metadata={"source": f"yfinance_Info_{ticker}"}))
+            
+        # 2. Earnings / Income Statement
+        income_stmt = t.income_stmt
+        if not income_stmt.empty:
+            content = f"Historical Income Statement Data for {ticker}:\n"
+            # Get latest 3 years if available
+            cols = list(income_stmt.columns)[:3]
+            for date in cols:
+                data = income_stmt[date]
+                content += f"\nFiscal Period Ending {date.strftime('%Y-%m-%d')}:\n"
+                content += f"Total Revenue: {data.get('Total Revenue', 'N/A')}\n"
+                content += f"Net Income: {data.get('Net Income', 'N/A')}\n"
+                content += f"Operating Income: {data.get('Operating Income', 'N/A')}\n"
+            
+            documents.append(Document(page_content=content, metadata={"source": f"yfinance_Earnings_{ticker}"}))
+            
     except Exception as e:
-        print(f"     Error fetching earnings for {ticker}: {e}")
+        print(f"     Error fetching data for {ticker}: {e}")
         
-    time.sleep(15) # Final buffer for the 5 request threshold
     return documents
 
 def run_daily_ingestion_batch():
@@ -101,7 +114,7 @@ def run_daily_ingestion_batch():
     successful_tickers = []
     
     for ticker in batch_tickers:
-        docs = fetch_alpha_vantage_data(ticker)
+        docs = fetch_ticker_data(ticker)
         if docs:
             raw_docs.extend(docs)
             successful_tickers.append(ticker)

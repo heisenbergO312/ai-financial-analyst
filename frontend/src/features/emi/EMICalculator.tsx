@@ -55,10 +55,11 @@ export const EMICalculator = () => {
   }, [loanAmount, interestRate, tenureYears])
 
   // App State Integration
-  const { setCurrentView, addMessage, setTyping, isAuthenticated } = useAppStore()
+  const { setCurrentView, addMessage, isAuthenticated } = useAppStore()
   const [avgIncome, setAvgIncome] = useState<number>(0)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isFetchingIncome, setIsFetchingIncome] = useState(false)
+  const isMockData = !avgIncome || avgIncome === 45000
 
   const incomeUtilRatio = useMemo(() => {
     if (!avgIncome) return 0
@@ -93,9 +94,7 @@ export const EMICalculator = () => {
         if (!months.length) return
         const latest = months[months.length - 1]
         const data = await getMonthlyBudget(latest.year, latest.month)
-        const totals = (data?.category_totals || {}) as Record<string, number>
-        const totalOutflow = Object.values(totals).reduce((acc, curr) => acc + (Number(curr) || 0), 0)
-        setAvgIncome(Math.round(totalOutflow * 1.2 / 1000) * 1000)
+        setAvgIncome(Number(data.income) || 0)
       })
       .catch(() => setAvgIncome(45000))
       .finally(() => setIsFetchingIncome(false))
@@ -126,6 +125,28 @@ export const EMICalculator = () => {
             <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">AI Enabled Analysis</span>
           </div>
         </div>
+
+        {/* Mock Data Warning */}
+        {isMockData && !isFetchingIncome && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+             className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-amber-100 dark:bg-amber-500/20 rounded-2xl">
+                <Info className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white">Currently Using Mock Data</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Connect your bank statement for income-aware affordability analysis.</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setCurrentView('budgets')}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-amber-500/20 transition-all shrink-0"
+            >
+              Upload Bank Statement
+            </button>
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 font-sans">
           
@@ -214,7 +235,7 @@ export const EMICalculator = () => {
                    )}
                 </p>
                 <div className="text-indigo-200 text-sm italic">
-                  {avgIncome > 0 ? "* Calculated from your bank statements." : "* Based on a general affordability estimate."}
+                  {avgIncome > 0 && !isMockData ? "* Calculated from your real bank statements." : "* Currently showing general mock data. Upload a statement for precision."}
                 </div>
                 <div className="pt-2">
                   <button 

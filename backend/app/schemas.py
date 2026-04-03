@@ -51,6 +51,7 @@ class MonthlyBudgetResponse(BaseModel):
     month: int
     category_totals: dict
     transactions: List[dict] = []
+    income: float = 0.0
     transaction_count: int
 
     class Config:

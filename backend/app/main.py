@@ -192,6 +192,7 @@ async def upload_bank_statement(
         if existing:
             existing.category_totals = result["category_totals"]
             existing.transactions = result["transactions"]
+            existing.income = result.get("estimated_income", 0.0)
             existing.transaction_count = result["transaction_count"]
         else:
             record = models.MonthlyBudget(
@@ -200,6 +201,7 @@ async def upload_bank_statement(
                 month=month,
                 category_totals=result["category_totals"],
                 transactions=result["transactions"],
+                income=result.get("estimated_income", 0.0),
                 transaction_count=result["transaction_count"],
             )
             db.add(record)

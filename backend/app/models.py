@@ -32,6 +32,7 @@ class MonthlyBudget(Base):
     month = Column(Integer, nullable=False)          # 1-12
     category_totals = Column(JSON, nullable=False)   # {"Housing": 25000, ...}
     transactions = Column(JSON, nullable=True)       # [{date, description, amount, category}, ...]
+    income = Column(Float, default=0.0)
     transaction_count = Column(Integer, default=0)
 
     owner = relationship("User", back_populates="monthly_budgets")

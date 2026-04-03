@@ -62,6 +62,12 @@ def parse_bank_statement(pdf_bytes: bytes, password: str = None):
         3. 'category_totals': A mapping of category names to the total sum spent (INR).
         4. 'transactions': A list of objects with 'date', 'description', 'amount', 'category'.
         5. 'transaction_count': Total number of transactions found.
+        6. 'estimated_income': The most likely monthly salary/stable income (INR).
+
+        Salary Detection Logic:
+        - Analyze ONLY Credit (CR/Inward) transactions.
+        - Look for recurring high-value credits landing between the 25th and 5th.
+        - If no clear salary is found, estimate from all significant inward cash flows.
 
         Note: Look for phrases like "as on February 28, 2026" or "Statement for March 2026" in the first 2000 characters to determine the month and year.
 
